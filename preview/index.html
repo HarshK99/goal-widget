@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Goal · Design preview</title>
+  <style>
+    :root { color-scheme: light; --ink:#182a42; --muted:#53657c; --rim:rgba(255,255,255,.75); --panel:rgba(244,247,255,.65); --ease:cubic-bezier(.23,1,.32,1); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100svh; color:var(--ink); font:14px/1.5 'Segoe UI',sans-serif; background:#a9bbd4; }
+    .wallpaper { position:fixed; inset:0; z-index:-1; overflow:hidden; background:radial-gradient(ellipse at 15% 12%,#f5ddca 0,transparent 43%),radial-gradient(ellipse at 85% 12%,#aabbed 0,transparent 55%),linear-gradient(145deg,#a6bcd3,#6d8cad 62%,#a0b9ce); }
+    .wallpaper::before,.wallpaper::after { content:''; position:absolute; width:140vw; height:80vh; border-radius:50%; transform:rotate(-27deg); filter:blur(30px); }
+    .wallpaper::before { top:55%; left:-30%; background:linear-gradient(#dfdfeb88,#507aaa55 20%,#2e518970 45%,#b0c0ddbb 70%,transparent); box-shadow:0 -30px 65px #f4ddcd55; }
+    .wallpaper::after { top:87%; left:0; background:linear-gradient(#c7d2ea88,#486c9a99); box-shadow:0 -20px 60px #e4e1f177; }
+    body[data-wallpaper="dark"] .wallpaper { background:radial-gradient(ellipse at 20% 0,#485778,transparent 65%),linear-gradient(145deg,#253653,#111d32); }
+    body[data-wallpaper="light"] .wallpaper { background:radial-gradient(ellipse at 15% 20%,#fff1dd,transparent 65%),linear-gradient(130deg,#e0e3ed,#b9ccdf); }
+    body[data-wallpaper="dark"] { --ink:#edf2ff; --muted:#c3cce0; --panel:rgba(30,42,64,.72); --rim:rgba(255,255,255,.2); }
+    header { position:absolute; top:28px; left:36px; right:36px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .brand { font-size:15px; font-weight:600; letter-spacing:-.3px; }
+    .preview-label { margin-left:12px; padding-left:12px; border-left:1px solid currentColor; opacity:.6; font-size:12px; font-weight:400; letter-spacing:0; }
+    .size-note { color:var(--muted); font-size:12px; }
+    main { min-height:100svh; display:grid; place-content:center; gap:28px; padding:100px 20px 160px; }
+    .widget-space { width:300px; height:300px; position:relative; }
+    .widget { width:300px; height:300px; border-radius:30px; position:relative; overflow:hidden; isolation:isolate; color:#192b46; background:linear-gradient(150deg,#edf0f5c9,#dce6f0a6); border:1px solid #ffffffa6; box-shadow:inset 0 1px 1px #fff,0 2px 4px #142e5312,0 18px 44px -16px #11284770,0 0 0 1px #ffffff22; backdrop-filter:blur(24px); transform-origin:top left; }
+    .landscape { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:57% center; opacity:.83; filter:saturate(.6) contrast(.84); z-index:-3; }
+    .frost { position:absolute; inset:0; z-index:-2; background:linear-gradient(180deg,#eef0f5fa 0%,#edf0f4e8 29%,#e9eff5b8 47%,#e8eef357 65%,#d8e4f322 85%),radial-gradient(ellipse at 10% 60%,#ffdfbaa6,transparent 72%); }
+    .widget::before { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(135deg,#fff7 0%,transparent 28%,transparent 66%,#c6d8ff44); box-shadow:inset 0 0 18px #f1f4ff55,inset 0 -1px 1px #fff9; border-radius:inherit; pointer-events:none; }
+    .widget::after { content:''; position:absolute; inset:3px; border:1px solid #ffffff24; border-radius:26px; pointer-events:none; }
+    h1 { position:absolute; top:50%; left:0; width:100%; transform:translateY(-50%); margin:0; padding:29px 25px; text-align:center; font-family:Georgia,'Times New Roman',serif; font-size:39px; font-weight:400; line-height:1.04; letter-spacing:-1.7px; white-space:pre-wrap; overflow-wrap:anywhere; text-shadow:0 1px 6px #fff5; }
+    .hint { margin:0; text-align:center; font-size:12px; color:var(--muted); }
+    .toolbar { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:6px; padding:7px; border:1px solid var(--rim); background:var(--panel); backdrop-filter:blur(24px); border-radius:18px; box-shadow:0 6px 24px #1a305918; }
+    button,select { font:inherit; color:inherit; }
+    button { cursor:pointer; border:0; background:transparent; min-height:40px; padding:0 14px; border-radius:11px; transition:background .15s,transform .15s var(--ease); }
+    button:hover { background:#ffffff40; }
+    button:active { transform:scale(.97); }
+    button[aria-pressed="true"] { background:#ffffff70; color:#233853; box-shadow:0 1px 4px #122d4b12; }
+    button:focus-visible,select:focus-visible,textarea:focus-visible { outline:2px solid #466fac; outline-offset:3px; }
+    .divider { width:1px; height:20px; background:currentColor; opacity:.16; margin:0 4px; }
+    select { min-height:40px; border:0; border-radius:10px; padding:0 9px; background:transparent; cursor:pointer; }
+    option { background:#f0f3fa; color:#192b46; }
+    .menu { position:fixed; z-index:5; min-width:165px; border:1px solid var(--rim); border-radius:14px; padding:5px; background:var(--panel); backdrop-filter:blur(24px); box-shadow:0 10px 32px #172b4933; }
+    .menu button { width:100%; text-align:left; }
+    dialog { width:min(380px,calc(100vw - 32px)); padding:26px; color:#192b46; border:1px solid #fff9; border-radius:24px; background:#f1f4faed; backdrop-filter:blur(24px); box-shadow:0 30px 90px #13243d44; }
+    dialog::backdrop { background:#13263f33; backdrop-filter:blur(6px); }
+    dialog h2 { margin:0 0 8px; font-size:20px; font-weight:500; letter-spacing:-.5px; }
+    dialog p { margin:0 0 16px; color:#566780; font-size:13px; }
+    label { display:block; font-size:13px; margin-bottom:6px; }
+    textarea { display:block; width:100%; min-height:126px; resize:vertical; border:1px solid #8ea2bf66; border-radius:12px; padding:12px; background:#ffffffa6; color:#192b46; font:22px/1.25 Georgia,serif; }
+    .actions { display:flex; justify-content:flex-end; gap:6px; margin-top:18px; }
+    .save { background:#243d60; color:#fff; }
+    .save:hover { background:#35547f; }
+    #error { color:#973530; margin-top:10px; }
+    @media(max-width:550px) { header { left:20px; right:20px; top:20px; } .size-note { display:none; } .toolbar { width:max-content; max-width:calc(100vw - 20px); gap:2px; bottom:20px; } button { padding:0 9px; } select { max-width:115px; } }
+    @media(prefers-reduced-motion:reduce) { * { transition:none!important; } }
+  </style>
+</head>
+<body>
+  <div class="wallpaper" aria-hidden="true"></div>
+  <header><div class="brand">Goal<span class="preview-label">Design preview</span></div><span class="size-note">300 × 300 · Landscape glass</span></header>
+  <main>
+    <div class="widget-space" id="space">
+      <article class="widget" id="widget" tabindex="0" aria-label="Your goal. Right-click or press Shift F10 to edit.">
+        <img class="landscape" src="landscape.jpg" alt="">
+        <div class="frost" aria-hidden="true"></div>
+        <h1 id="goal">Build
+something
+people want.</h1>
+      </article>
+    </div>
+    <p class="hint">One goal. A little room to breathe.</p>
+  </main>
+  <nav class="toolbar" aria-label="Preview controls">
+    <button id="actual" aria-pressed="true">Actual size</button>
+    <button id="zoom" aria-pressed="false">150%</button>
+    <span class="divider" aria-hidden="true"></span>
+    <select id="wallpaper" aria-label="Preview background"><option value="blue">Blue desktop</option><option value="light">Light desktop</option><option value="dark">Dark desktop</option></select>
+    <span class="divider" aria-hidden="true"></span>
+    <button id="edit">Edit goal</button>
+  </nav>
+  <div class="menu" id="menu" hidden><button id="menu-edit">Edit goal</button></div>
+  <dialog id="editor" aria-labelledby="edit-title">
+    <form id="form">
+      <h2 id="edit-title">Your one thing.</h2>
+      <p>Keep it short. Use Enter to choose your line breaks.</p>
+      <label for="input">Goal</label>
+      <textarea id="input" maxlength="100" required></textarea>
+      <p id="error" role="alert" hidden></p>
+      <div class="actions"><button type="button" id="cancel">Cancel</button><button class="save" type="submit">Save goal</button></div>
+    </form>
+  </dialog>
+  <script>
+    const $ = id => document.getElementById(id);
+    const goal = $('goal'), widget = $('widget'), editor = $('editor'), menu = $('menu');
+    let returnFocus;
+    function fitGoal() {
+      let size = 39;
+      goal.style.fontSize = size + 'px';
+      while (goal.offsetHeight > 236 && size > 23) goal.style.fontSize = --size + 'px';
+    }
+    function editGoal() {
+      returnFocus = document.activeElement;
+      menu.hidden = true;
+      $('input').value = goal.textContent;
+      $('error').hidden = true;
+      editor.showModal();
+      $('input').focus();
+    }
+    $('edit').onclick = editGoal;
+    $('menu-edit').onclick = editGoal;
+    $('cancel').onclick = () => editor.close();
+    editor.addEventListener('close', () => (returnFocus?.closest('.menu') ? widget : returnFocus)?.focus());
+    $('form').onsubmit = event => {
+      event.preventDefault();
+      const value = $('input').value.trim();
+      if (!value || value.split('\n').length > 5) {
+        $('error').textContent = 'Use a short goal with no more than five lines.';
+        $('error').hidden = false;
+        return;
+      }
+      goal.textContent = value;
+      fitGoal();
+      editor.close();
+    };
+    function showMenu(x,y) {
+      menu.hidden = false;
+      menu.style.left = Math.max(8,Math.min(x,innerWidth - 180)) + 'px';
+      menu.style.top = Math.max(8,Math.min(y,innerHeight - 64)) + 'px';
+      $('menu-edit').focus();
+    }
+    widget.addEventListener('contextmenu', event => { event.preventDefault(); showMenu(event.clientX,event.clientY); });
+    widget.addEventListener('keydown', event => {
+      if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu') {
+        event.preventDefault();
+        const box = widget.getBoundingClientRect(); showMenu(box.left + 24,box.top + 24);
+      }
+    });
+    document.addEventListener('pointerdown', event => { if (!menu.contains(event.target)) menu.hidden = true; });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu.hidden) { menu.hidden = true; widget.focus(); } });
+    $('wallpaper').onchange = event => document.body.dataset.wallpaper = event.target.value;
+    function zoom(enlarge) {
+      const scale = enlarge ? Math.min(1.5,(innerWidth - 40)/300) : 1;
+      widget.style.transform = `scale(${scale})`;
+      $('space').style.width = $('space').style.height = 300 * scale + 'px';
+      $('actual').setAttribute('aria-pressed',String(!enlarge));
+      $('zoom').setAttribute('aria-pressed',String(enlarge));
+    }
+    $('actual').onclick = () => zoom(false);
+    $('zoom').onclick = () => zoom(true);
+    window.addEventListener('resize', () => zoom($('zoom').getAttribute('aria-pressed') === 'true'));
+  </script>
+</body>
+</html>

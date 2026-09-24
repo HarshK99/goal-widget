@@ -1,0 +1,12 @@
+Goal Widget landscape
+
+landscape.png was AI-generated for this project using OpenAI image generation
+on 2026-09-24. It depicts a fictional mountain landscape, not a documented place.
+No reference photograph was supplied to the generation request.
+
+Output rights are governed by the applicable OpenAI account agreement.
+OpenAI Terms of Use, Content / Ownership of content:
+https://openai.com/policies/terms-of-use/
+
+The earlier Unsplash preview photograph is not included in the app assets.
+See docs/artwork.md in the source project for provenance and generation details.

@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.vs/
+*.user
+artifacts/
+# Local design references; provisional image is not cleared for redistribution.
+preview/landscape.jpg
+preview/preview.png
+28bfb300-c7cf-4f99-8628-e0d70a411b4c.png
+# Local credentials and personal state must not enter source control.
+.env
+.env.*
+!.env.example
+state.json
+state.json.bak
