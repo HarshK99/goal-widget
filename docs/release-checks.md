@@ -34,6 +34,7 @@ Only results explicitly recorded below were observed. All other cases remain **n
 | Monitor changes | Removal, negative coordinates and display rearrangement leave window reachable | Not performed |
 | Display scaling | 100%, 125%, 150%, 200%; card size, typography, editor and hit areas usable | Not performed |
 | Ordinary window behavior | Other apps cover widget; no repeated foreground activation; taskbar/shortcut recovery and Quit work | Not performed |
+| Tray icon | Icon appears after launch, after sign-in and after Explorer restarts; left-click restores the widget; right-click menu edits, toggles Task View and quits; icon disappears on Quit | Partly observed 2026-10-04: build passed with zero warnings/errors (`artifacts/tray-icon-build.log`), widget reopened, and Windows recorded a tray icon for the executable with tooltip "Goal". Clicks, menu, Quit removal, sign-in and Explorer restart not performed |
 | Win+D observation | Record minimizing/restoring behavior; survival is optional | Not performed |
 | Native appearance | Actual-size centered composition over mountains; light/dark surroundings and inactive state; record corner compromise and user acceptance separately | Compact card viewed at 150%: centered saved text and artwork rendered, client rectangle 315 × 315 physical pixels. Screenshot artifacts/widget-compact.png. Other settings and resized-result acceptance pending |
 | Contrast | Measure composed goal contrast: at least 3:1 for large text, preferably 4.5:1; ordinary text at least 4.5:1 | Not performed |

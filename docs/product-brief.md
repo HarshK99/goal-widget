@@ -9,7 +9,7 @@ The user approved a compact square with a frosted-glass landscape, then requeste
 
 MVP: one goal, editing, local persistence, dragging, saved position. Other apps cover it. Win+D support is optional and must be skipped if it requires fragile desktop integration.
 
-Excluded: timer, accounts, sync, multiple goals, statistics, streaks, theme/landscape galleries, resizing controls and tray menu. iPhone/iPad widgets are desired later, not current scope.
+Excluded: timer, accounts, sync, multiple goals, statistics, streaks, theme/landscape galleries and resizing controls. A tray menu was excluded originally; the user added a tray icon on 2026-10-04 (see Windows behavior). iPhone/iPad widgets are desired later, not current scope.
 
 ## Approved design
 - Current adjustment (2026-09-24): user accepts the current visual treatment for now and requests a 30% reduction in card width/height: **210 × 210 logical units**. Scale resting text and spacing by 0.7 (font range 27.3–16.1); keep editor/menu controls full-sized. This supersedes the original starting dimensions and font sizes below. User also prioritizes reducing app disk use; additional glass refinement is deferred.
@@ -35,7 +35,9 @@ Excluded: timer, accounts, sync, multiple goals, statistics, streaks, theme/land
 ## Windows behavior and quality
 Use an ordinary non-topmost desktop window without visible title bar; other apps cover it. No repeated foreground activation. Normal activation while editing is acceptable. User clarified on 2026-09-24: start automatically at Windows sign-in, remain behind other apps, and remove the taskbar entry. Use a desktop shortcut for reopening and the context menu for Quit. Current-user Startup and Desktop shortcuts are configured; changes to hide taskbar/Alt+Tab and disable minimization have been rebuilt and reopened; visual verification remains pending. The user wants one widget across all Windows virtual desktops using the pinning setup above; the result remains unverified.
 
-Win+D behavior remains unverified; restore via shortcut if needed. Do not promise wallpaper-level attachment or use undocumented Explorer tricks. Win+D survival is not a release criterion.
+Tray icon (2026-10-04): the user removed the Desktop shortcut and asked for an icon in the Windows notification area instead, with the widget always starting at sign-in. Left-click brings the widget to the front; right-click offers Edit goal, Show in Task View and Quit. The taskbar entry stays removed. Built and running; click behavior not yet observed.
+
+Win+D behavior remains unverified; restore via the tray icon if needed. Do not promise wallpaper-level attachment or use undocumented Explorer tricks. Win+D survival is not a release criterion.
 
 Keyboard focus must be visible. Check 100/125/150/200% display scaling when authorized. Standard text targets 4.5:1 contrast; large goal text at least 3:1, preferably 4.5:1. Respect high contrast and reduced motion. Keep an attractive tinted fallback when transparency is unavailable. The goal stays centered for all accepted text.
 

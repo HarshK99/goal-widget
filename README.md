@@ -8,11 +8,12 @@ The Windows x64 app has been built and launched locally. Its complete app folder
 
 ## Use on the development machine
 
-Open `artifacts/compact-build/GoalWidget.exe`, keeping the entire folder together, or use the **Goal Widget** desktop shortcut. Build output and machine-local shortcuts are not included in this repository.
+Open `artifacts/compact-build/GoalWidget.exe`, keeping the entire folder together. Build output and machine-local shortcuts are not included in this repository.
 
 - Right-click → **Edit goal** to change the text, or **Quit** to close the widget.
 - Drag the card to move it. Other apps can cover it.
 - The widget starts hidden from the taskbar and Alt+Tab.
+- A tray icon beside the clock brings the widget to the front on left-click and offers the same menu on right-click. Windows 11 puts it in the `^` overflow popup until you drag it out.
 - A Startup shortcut is configured on the original development machine. Cloning this repository does not install that shortcut.
 - For virtual desktops: right-click → **Show in Task View**, press **Win+Tab**, right-click **Goal** → **Show windows from this app on all desktops**, then turn **Show in Task View** off again. Pinning after hiding Task View or signing in again remains unverified.
 

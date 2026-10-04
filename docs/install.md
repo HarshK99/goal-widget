@@ -10,7 +10,7 @@ The user deleted the superseded 231.4 MiB build folder; its absence was confirme
 
 ## Intended distribution
 
-A local ZIP containing the complete app folder, including `GoalWidget.exe`, dependencies, generated artwork and its notice. Extract the whole folder; moving only the executable is not supported by the selected configuration. No store upload, installer or tray menu is planned. Automatic startup was subsequently requested and configured locally.
+A local ZIP containing the complete app folder, including `GoalWidget.exe`, dependencies, generated artwork and its notice. Extract the whole folder; moving only the executable is not supported by the selected configuration. No store upload or installer is planned. Automatic startup and a tray icon were subsequently requested; startup is configured locally, and the tray icon is in the current local build.
 
 Project settings target Windows 11 build 22000 or newer and x64 processors; no ARM64 build is configured. The project targets .NET 10 and uses selected components from Windows App SDK 2.5.1; exact pins are recorded in `environment.md`. It requests both runtimes be included with the app (`SelfContained` and `WindowsAppSDKSelfContained`), rather than requiring a separate runtime installation. That intention is not proof that a published folder will launch on a clean machine; confirm remaining native dependencies from actual release output and launch evidence.
 
@@ -18,7 +18,9 @@ Build-machine prerequisites are separately recorded in `environment.md`. The .NE
 
 ## Current local startup
 
-A Goal Widget.lnk shortcut was created in the current user’s Windows Startup folder and on the Desktop, pointing to the compact executable above. It is configured to start at sign-in; sign-in behavior has not yet been observed. Double-click the desktop shortcut to reopen it. To disable startup, remove only that shortcut from the Startup folder (open shell:startup using Win+R). Moving the app folder requires updating both shortcuts. Changes to hide the taskbar entry and disable minimization were rebuilt and reopened after authorization; visual taskbar/Alt+Tab inspection remains pending. Use the virtual desktop pinning steps above; their behavior after hiding Task View and signing in again remains unverified.
+A Goal Widget.lnk shortcut exists in the current user’s Windows Startup folder, pointing to the compact executable above. Checked 2026-10-04: the shortcut is present, its target exists and Windows has not disabled it. The Desktop shortcut has been removed by the user. Startup at sign-in is configured; a sign-in has not yet been observed directly. To disable startup, remove only that shortcut from the Startup folder (open shell:startup using Win+R). Moving the app folder requires updating the shortcut.
+
+The widget adds an icon to the notification area (the small icons beside the clock). Left-click brings the widget to the front; right-click offers **Edit goal**, **Show in Task View** and **Quit**. Windows 11 places new icons in the `^` overflow popup; drag it onto the taskbar once to keep it visible. The icon exists only while the widget runs. Changes to hide the taskbar entry and disable minimization were rebuilt and reopened after authorization; visual taskbar/Alt+Tab inspection remains pending. Use the virtual desktop pinning steps above; their behavior after hiding Task View and signing in again remains unverified.
 
 ## Proposed install and use
 
@@ -27,9 +29,9 @@ A Goal Widget.lnk shortcut was created in the current user’s Windows Startup f
 3. Right-click the card and choose **Edit goal**. With keyboard focus on the card, use **Shift+F10** for the menu or **Enter** to edit.
 4. Enter one short goal, using Enter for deliberate line breaks. Choose **Save**, or **Cancel** / Escape to discard the draft. Limit: 100 text elements and five explicit lines; text must also fit the card.
 5. Drag the card to move it, or focus it and use **Alt+arrow keys**. The intended behavior is to remember the goal and position.
-6. Choose **Quit** from the card's menu to close it. Reopen using the shortcut or executable.
+6. Choose **Quit** from the card's menu or the tray icon's menu to close it. Reopen using the executable or a shortcut to it.
 
-Other apps can cover the widget. Win+D may minimize it; reopen the desktop shortcut to recover it. It is not attached to the wallpaper. Windows supplies its corners/shadow, which may differ from the HTML preview.
+Other apps can cover the widget. Win+D may minimize it; click the tray icon to recover it. It is not attached to the wallpaper. Windows supplies its corners/shadow, which may differ from the HTML preview.
 
 ## Goal data and recovery
 

@@ -22,6 +22,8 @@ public sealed partial class WidgetWindow : Window
     private readonly AccessibilitySettings accessibility = new();
     private readonly UISettings uiSettings = new();
     private readonly MenuFlyout menu = new();
+    private readonly ToggleMenuFlyoutItem taskView = new() { Text = "Show in Task View", MinHeight = 44 };
+    private readonly TrayIcon tray;
     private EditGoalDialog? editor;
     private Point? pointerStart;
     private Task positionSave = Task.CompletedTask;
@@ -47,6 +49,7 @@ public sealed partial class WidgetWindow : Window
         if (DesktopAcrylicController.IsSupported()) SystemBackdrop = new DesktopAcrylicBackdrop();
         placement = new WindowPlacement(AppWindow, handle);
         placement.Restore(store.Current.Placement);
+        tray = new TrayIcon(handle);
         subclass = WindowMessage;
         NativeWindow.SetWindowSubclass(handle, subclass, 1, 0);
 
@@ -57,7 +60,6 @@ public sealed partial class WidgetWindow : Window
         var quit = new MenuFlyoutItem { Text = "Quit", MinHeight = 44 };
         quit.Click += (_, _) => Close();
         menu.Items.Add(edit);
-        var taskView = new ToggleMenuFlyoutItem { Text = "Show in Task View", MinHeight = 44 };
         taskView.Click += (_, _) => AppWindow.IsShownInSwitchers = taskView.IsChecked;
         menu.Items.Add(taskView);
         menu.Items.Add(new MenuFlyoutSeparator());
@@ -80,6 +82,7 @@ public sealed partial class WidgetWindow : Window
         {
             closed = true;
             uiSettings.TextScaleFactorChanged -= TextScaleChanged;
+            tray.Dispose();
             NativeWindow.RemoveWindowSubclass(handle, subclass, 1);
             Application.Current.Exit();
         };
@@ -140,6 +143,25 @@ public sealed partial class WidgetWindow : Window
         pointerStart = null;
         menu.ShowAt(Card, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions { Position = e.GetPosition(Card) });
         e.Handled = true;
+    }
+
+    private void ShowTrayMenu(int x, int y)
+    {
+        if (closed) return;
+        if (editor is not null) { editor.Restore(); return; }
+        switch (tray.ShowMenu(x, y, AppWindow.IsShownInSwitchers))
+        {
+            case TrayIcon.Command.Edit:
+                Restore();
+                OpenEditor();
+                break;
+            case TrayIcon.Command.TaskView:
+                taskView.IsChecked = AppWindow.IsShownInSwitchers = !AppWindow.IsShownInSwitchers;
+                break;
+            case TrayIcon.Command.Quit:
+                Close();
+                break;
+        }
     }
 
     private void Card_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -205,6 +227,15 @@ public sealed partial class WidgetWindow : Window
                 placement.ResizeAndClamp();
                 if (message != 0x02E0) positionSave = SavePositionAsync();
             });
+        if (message == TrayIcon.Message)
+        {
+            // Version 4 icons report the event in the low word and the screen position in wParam.
+            var input = (uint)(lParam & 0xFFFF);
+            int x = (short)(wParam & 0xFFFF), y = (short)((wParam >> 16) & 0xFFFF);
+            if (input is 0x0400 or 0x0401) DispatcherQueue.TryEnqueue(Restore); // NIN_SELECT, NIN_KEYSELECT.
+            else if (input == 0x007B) DispatcherQueue.TryEnqueue(() => ShowTrayMenu(x, y)); // WM_CONTEXTMENU.
+        }
+        else if (tray.IsTaskbarCreated(message)) tray.Add();
         return NativeWindow.DefSubclassProc(hwnd, message, wParam, lParam);
     }
 

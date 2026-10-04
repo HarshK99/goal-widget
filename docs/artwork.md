@@ -10,6 +10,10 @@ Recorded 2026-09-24. The app now uses `src/GoalWidget/Assets/landscape.png`, an 
 - Permission basis: the [OpenAI Terms of Use, Content](https://openai.com/policies/terms-of-use/) assign OpenAI's output rights to the user to the extent permitted by law. Use remains subject to the applicable account agreement. This is generated project artwork, not a stock-photo sublicense or a claim of exclusive copyright. A source notice is included as app content.
 - The standalone image and native compact card were viewed. The user accepts the current visual treatment for now; formal contrast and fit checks remain pending.
 
+## Tray icon
+
+`src/GoalWidget/Assets/goal.ico` (added 2026-10-04) is original project artwork drawn from plain shapes by a script: a rounded pale-blue card, two mountains in the app's navy and slate blue, and a warm sun. It contains 16, 20, 24, 32, 48, 64 and 256 pixel sizes and uses no third-party image. Windows loaded the file at 16–32 pixels; its appearance in the real tray has not been observed.
+
 ## Generation brief
 
 Square photographic landscape for a calm desktop goal widget: pale cloudy pearl-blue sky across the upper 40%, snow-covered pyramidal peak slightly right of center, layered muted slate-blue mountains in the lower half, darker foreground slopes, cool mist and quiet warm dawn light from the left. Subtle realistic rock/snow textures, desaturated air, low contrast behind future text. No UI, text, frame, rounded corners, people, buildings, logos or watermarks. Requested an original fictional scene, not reproduction of a specific photograph.

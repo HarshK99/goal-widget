@@ -29,6 +29,7 @@
     <PackageReference Include="Microsoft.WindowsAppSDK.DWrite" Version="2.1.0" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.9169" />
     <Content Include="Assets\landscape.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\goal.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\ARTWORK-NOTICE.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
