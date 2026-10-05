@@ -53,4 +53,4 @@ Right-click menus, tray clicks, start at the next sign-in, and the remaining row
 - The Win+D fix adds a permanent 250 ms timer. It is cheap, but it is the one piece of the app that runs continuously.
 
 ## Next starting point
-Get the user's confirmation of Win+D with the real key. Collect results for menus, tray clicks and sign-in start. Then finish the release checks and package a ZIP when authorized. The Win+D fix in `DesktopPin.cs` and the result updates to this file and `docs/release-checks.md` are not committed.
+Get the user's confirmation of Win+D with the real key. Collect results for menus, tray clicks and sign-in start. Then finish the release checks and package a ZIP when authorized.
