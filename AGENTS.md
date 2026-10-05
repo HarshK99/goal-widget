@@ -4,14 +4,13 @@
 Use plain words and short updates. Explain technical terms and a skill/subagent on first use. Say what you will do before doing it. Ask one focused question at a time. Never invent checks, prior progress, or user acceptance.
 
 ## Starting a phase
-`start phase N` is sufficient instruction. Read, in order:
+Phases 1–3 produced the first (WinUI) version, which the 2026-10-05 rebuild replaced; their documents and the old plan were removed. Only Phase 4, check and package, remains. `start phase 4` is sufficient instruction. Read, in order:
 1. This file.
 2. `docs/product-brief.md`.
 3. `STATUS.md`.
-4. `docs/superpowers/plans/2026-09-24-goal-widget.md`.
-5. The matching document in `docs/phases/` and its required prior outputs.
+4. `docs/phases/04-check-and-package.md` and the documents it lists.
 
-Execute only that phase; resume recorded progress. Phases are numbered 1–4, with no Phase 0. If a requested phase is undefined, ask one focused question rather than remapping it. Report missing prerequisites instead of inventing prior completion.
+Execute only that phase; resume recorded progress. If a requested phase is undefined, ask one focused question rather than remapping it. Report missing prerequisites instead of inventing prior completion.
 
 ## Authorization
 - Do not run build commands, test commands, or code review without the user's explicit request for that activity in the current phase/task. Starting a phase, including Phase 4, does not authorize these activities.

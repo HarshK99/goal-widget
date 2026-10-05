@@ -1,46 +1,53 @@
-﻿# Goal widget — product brief
+# Goal widget — product brief
 
-> Virtual desktop update: user means every Windows virtual desktop. Rebuilt and reopened with right-click **Show in Task View** (temporary visibility switch), zero warnings/errors; `artifacts/desktop-pin-setup-build.log`. To configure Windows pinning: enable that option, press Win+Tab, right-click Goal, choose **Show windows from this app on all desktops**, return to the widget and disable Show in Task View. Pinning has not yet been applied or verified, including after hiding Task View or signing in again.
+> Revised 2026-10-05. The first brief asked for "an ordinary non-topmost desktop window". That was wrong for a widget meant to stay on the desktop: an ordinary app window takes focus, belongs to one virtual desktop and needs patches to hide it. The user asked for a rebuild from first principles. This brief replaces the window model and the toolkit; the visual design and the saving rules are unchanged.
 
 ## Job and scope
-A beautiful Windows 11 desktop object displaying one personal goal, edited roughly monthly. Exceptional visual quality matters more than features.
+A beautiful Windows 11 desktop object displaying one personal goal, edited roughly monthly. It lies on the desktop like a note on a desk. Exceptional visual quality matters more than features.
 
-The user approved a compact square with a frosted-glass landscape, then requested text centered horizontally and vertically with centered lines. They accepted the adjustment and authorized finalizing the plan. The temporary preview is the visual reference, not proof of native Windows feasibility.
+MVP: one goal, editing, local persistence, dragging, saved position, a tray icon, start at sign-in.
 
-MVP: one goal, editing, local persistence, dragging, saved position. Other apps cover it. Win+D support is optional and must be skipped if it requires fragile desktop integration.
+Excluded: timer, accounts, sync, multiple goals, statistics, streaks, theme/landscape galleries and resizing controls. iPhone/iPad widgets are desired later, not current scope.
 
-Excluded: timer, accounts, sync, multiple goals, statistics, streaks, theme/landscape galleries and resizing controls. A tray menu was excluded originally; the user added a tray icon on 2026-10-04 (see Windows behavior). iPhone/iPad widgets are desired later, not current scope.
+## Desktop behavior (the core requirement)
+1. **Stays on the desktop.** Above the wallpaper and icons, beneath every app window. It never comes forward by itself.
+2. **Never takes focus.** Not at sign-in, not when clicked, not when switching virtual desktops.
+3. **On every virtual desktop**, with no setup or pinning.
+4. **No taskbar button and no Alt+Tab entry.**
+5. **Starts at every sign-in** without the user doing anything.
+6. **A tray icon** (the small icons beside the clock) is its handle: left-click shows the widget above other windows until the user moves to another app; right-click offers Edit goal, Show above other windows and Quit.
+7. **Win+D (Show Desktop)** should leave the widget visible. This is wanted but not a release criterion.
+
+How this is achieved: the widget is an unowned tool window flagged never-activate, held at the bottom of the window stack, and only the app itself may change its stacking order. Only documented Windows APIs are used. It is not attached to the wallpaper and no Explorer internals are modified.
 
 ## Approved design
-- Current adjustment (2026-09-24): user accepts the current visual treatment for now and requests a 30% reduction in card width/height: **210 × 210 logical units**. Scale resting text and spacing by 0.7 (font range 27.3–16.1); keep editor/menu controls full-sized. This supersedes the original starting dimensions and font sizes below. User also prioritizes reducing app disk use; additional glass refinement is deferred.
-- Reference: `preview/index.html`. Original root PNG is inspiration, not a strict specification. The old `preview/preview.png` predates centering.
-- Start at 300 × 300 Windows logical units, which scale with display settings.
-- Georgia serif, regular, centered; starting font size 39, line height approximately 1.04. Match visual appearance rather than blindly copying browser measurements.
+- Card: **210 × 210 logical units** (the original 300 scaled by 0.7), with text and spacing scaled the same way; font range 27.3–16.1. Editor controls stay full-sized.
+- Reference: `preview/index.html`. Original root PNG is inspiration, not a strict specification.
+- Georgia serif, regular, centered; line height approximately 1.04.
 - Default goal with deliberate line breaks: “Build” / “something” / “people want.”
 - Navy text `#192B46`, pale frost `#EDF0F4`, muted mountain blues, quiet warm glow. Maintain contrast where the centered goal overlaps the mountains.
-- Target 30-unit corners, fine white rim, restrained shadow, faint internal highlights. Native corner constraints must be addressed early.
-- One fixed landscape. Current preview photo is provisional; clear its provenance/license or replace before distribution.
-- No persistent buttons/labels inside the resting widget. Prototype header, caption, wallpaper/zoom controls are preview aids only.
-- No idle animation, cursor-following glare, parallax, or continuous redraw.
+- 21-unit corners (the design's 30 at card scale), fine white rim, restrained shadow, faint internal highlights. The app draws these itself.
+- One fixed landscape, `Assets/landscape.png`; provenance in `artwork.md`.
+- No persistent buttons or labels inside the resting widget.
+- No idle animation, cursor-following glare, parallax or continuous redraw.
+- Live background blur is not used: Windows turns it off for windows that are not in focus, and the widget never is.
 
 ## Flow
-1. Launch from shortcut; restore goal/position. First launch uses default text near the primary display's upper-right usable area.
-2. Drag unused card space; save position when movement ends. Restore into a visible connected display if screen configuration changed.
-3. Right-click → Edit goal. Keyboard: focus window, Shift+F10. Context menu also includes Quit because there is no title bar.
-4. Small edit dialog: labeled text field, Save, Cancel. Preserve explicit line breaks; Escape cancels, Enter inserts a line break.
-5. Allow 1–100 text elements and up to five explicit lines; reject blank text. Fit wrapping within the card down to size 23. If it still cannot fit, ask for a shorter goal rather than clipping it.
-6. Save locally before reporting success. On failure, retain draft/editor with a plain explanation and retry. Cancel changes nothing.
-7. Quit/relaunch preserves goal and position. App use needs no network.
+1. Starts at sign-in; restores goal and position. First launch uses default text near the primary display's upper-right usable area.
+2. Drag the card to move it; the position is saved when the drag ends. If the display setup changes, the card is kept inside a visible display.
+3. Double-click the card, or right-click → Edit goal, or use the tray icon's menu. The tray icon is the keyboard route (Win+B).
+4. Editor window: text field, Save, Cancel. Explicit line breaks are kept; Escape cancels, Enter inserts a line break. The editor is an ordinary window that comes to the front.
+5. Allow 1–100 text elements and up to five explicit lines; reject blank text. Fit wrapping within the card down to size 16.1. If it still cannot fit, ask for a shorter goal rather than clipping it.
+6. Save locally before reporting success. On failure, keep the draft and the editor open with a plain explanation. Cancel changes nothing.
+7. Quit from either menu. Relaunch preserves goal and position. No network is needed.
 
-## Windows behavior and quality
-Use an ordinary non-topmost desktop window without visible title bar; other apps cover it. No repeated foreground activation. Normal activation while editing is acceptable. User clarified on 2026-09-24: start automatically at Windows sign-in, remain behind other apps, and remove the taskbar entry. Use a desktop shortcut for reopening and the context menu for Quit. Current-user Startup and Desktop shortcuts are configured; changes to hide taskbar/Alt+Tab and disable minimization have been rebuilt and reopened; visual verification remains pending. The user wants one widget across all Windows virtual desktops using the pinning setup above; the result remains unverified.
+## Technology
+C# and WPF on .NET Framework 4.8, which is part of Windows 11, so no runtime is bundled. The app folder is about 3 MiB (the WinUI version was 175 MiB). The goal is stored in `%LOCALAPPDATA%\GoalWidget\state.json` with a backup; a small log is kept beside it.
 
-Tray icon (2026-10-04): the user removed the Desktop shortcut and asked for an icon in the Windows notification area instead, with the widget always starting at sign-in. Left-click brings the widget to the front; right-click offers Edit goal, Show in Task View and Quit. The taskbar entry stays removed. Built and running; click behavior not yet observed.
+## Quality
+Check 100/125/150/200% display scaling when authorized. Large goal text at least 3:1 contrast, preferably 4.5:1. High contrast hides the artwork and uses system colors on the card. The goal stays centered for all accepted text.
 
-Win+D behavior remains unverified; restore via the tray icon if needed. Do not promise wallpaper-level attachment or use undocumented Explorer tricks. Win+D survival is not a release criterion.
-
-Keyboard focus must be visible. Check 100/125/150/200% display scaling when authorized. Standard text targets 4.5:1 contrast; large goal text at least 3:1, preferably 4.5:1. Respect high contrast and reduced motion. Keep an attractive tinted fallback when transparency is unavailable. The goal stays centered for all accepted text.
+Known gaps against the earlier brief: the card no longer takes keyboard focus (the tray menu replaces Shift+F10, Enter and Alt+arrow moves); text does not follow the Windows text-size setting; the editor does not restyle itself for high contrast; WPF has no letter-spacing, so the goal text is set slightly wider than in the preview.
 
 ## Future Apple direction
-Keep goal content/artwork separate from Windows behavior. Apple widgets use WidgetKit/SwiftUI, Apple's widget/interface tools; expect a separate Apple interface. Do not add shared frameworks or sync services now or promise identical glass rendering. [Apple documentation](https://developer.apple.com/documentation/widgetkit)
-
+Keep goal content and artwork separate from Windows behavior. Apple widgets use WidgetKit/SwiftUI; expect a separate Apple interface. Do not add shared frameworks or sync services now. [Apple documentation](https://developer.apple.com/documentation/widgetkit)

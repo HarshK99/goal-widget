@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 
 namespace GoalWidget;
 
@@ -10,6 +11,7 @@ public sealed record GoalState
     public SavedPlacement? Placement { get; init; }
 }
 
+/// <summary>The card's top-left corner in physical pixels, and the monitor it was on.</summary>
 public sealed record SavedPlacement(int X, int Y, string MonitorId, uint Dpi);
 
 public static class GoalTextRules

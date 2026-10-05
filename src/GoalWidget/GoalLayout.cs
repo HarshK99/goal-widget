@@ -1,6 +1,5 @@
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Windows.Foundation;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace GoalWidget;
 
@@ -13,7 +12,7 @@ internal static class GoalLayout
     internal const double Height = 240 * CardScale;
     internal const double MinimumFontSize = 23 * CardScale;
 
-    // Uses the same native text layout, font, wrapping and system text scale as the visible card.
+    // Uses the same text layout, font and wrapping as the visible card.
     internal static double? Fit(string text)
     {
         var measure = new TextBlock

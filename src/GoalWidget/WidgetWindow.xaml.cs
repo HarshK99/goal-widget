@@ -1,274 +1,168 @@
-using Microsoft.UI.Input;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Composition.SystemBackdrops;
-using Windows.Foundation;
-using Windows.Graphics;
-using Windows.System;
-using Windows.UI.Core;
-using Windows.UI.ViewManagement;
+using System;
+using System.ComponentModel;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace GoalWidget;
 
-public sealed partial class WidgetWindow : Window
+public partial class WidgetWindow : Window
 {
+    private const double ShadowRoom = 26; // The margin around the card in the XAML.
     private readonly GoalStore store;
-    private readonly nint handle;
-    private readonly WindowPlacement placement;
-    private readonly NativeWindow.SubclassProc subclass;
-    private readonly AccessibilitySettings accessibility = new();
-    private readonly UISettings uiSettings = new();
-    private readonly MenuFlyout menu = new();
-    private readonly ToggleMenuFlyoutItem taskView = new() { Text = "Show in Task View", MinHeight = 44 };
-    private readonly TrayIcon tray;
-    private EditGoalDialog? editor;
-    private Point? pointerStart;
+    private nint handle;
+    private DesktopPin? pin;
+    private TrayIcon? tray;
+    private EditGoalWindow? editor;
+    private Native.Point dragCursor;
+    private Native.Rect dragWindow;
+    private bool dragging, moved;
     private Task positionSave = Task.CompletedTask;
-    private bool closing;
-    private bool closed;
 
     public WidgetWindow(GoalStore store)
     {
         this.store = store;
         InitializeComponent();
-        Goal.Width = GoalLayout.Width;
-        Card.Padding = new Thickness(25 * GoalLayout.CardScale, 29 * GoalLayout.CardScale,
-                                     25 * GoalLayout.CardScale, 29 * GoalLayout.CardScale);
-        handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        var presenter = (OverlappedPresenter)AppWindow.Presenter;
-        presenter.SetBorderAndTitleBar(true, false);
-        presenter.IsResizable = false;
-        presenter.IsMaximizable = false;
-        presenter.IsMinimizable = false;
-        presenter.IsAlwaysOnTop = false;
-        AppWindow.IsShownInSwitchers = false;
-        NativeWindow.RequestRoundedCorners(handle);
-        if (DesktopAcrylicController.IsSupported()) SystemBackdrop = new DesktopAcrylicBackdrop();
-        placement = new WindowPlacement(AppWindow, handle);
-        placement.Restore(store.Current.Placement);
-        tray = new TrayIcon(handle);
-        subclass = WindowMessage;
-        NativeWindow.SetWindowSubclass(handle, subclass, 1, 0);
-
-        menu.MenuFlyoutPresenterStyle = new Style(typeof(MenuFlyoutPresenter));
-        menu.MenuFlyoutPresenterStyle.Setters.Add(new Setter(FrameworkElement.MinWidthProperty, 180d));
-        var edit = new MenuFlyoutItem { Text = "Edit goal", MinHeight = 44 };
-        edit.Click += (_, _) => OpenEditor();
-        var quit = new MenuFlyoutItem { Text = "Quit", MinHeight = 44 };
-        quit.Click += (_, _) => Close();
-        menu.Items.Add(edit);
-        taskView.Click += (_, _) => AppWindow.IsShownInSwitchers = taskView.IsChecked;
-        menu.Items.Add(taskView);
-        menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(quit);
-        Card.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(Card_PointerPressed), true);
-        Card.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler(Card_PointerMoved), true);
-        Card.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((_, _) => pointerStart = null), true);
-        Card.PointerCanceled += (_, _) => pointerStart = null;
-        Card.PointerCaptureLost += (_, _) => pointerStart = null;
-        Root.Loaded += (_, _) =>
-        {
-            ApplyGoal();
-            Card.Focus(FocusState.Programmatic);
-            if (store.Notice is not null) ShowNotice(store.Notice);
-        };
-        uiSettings.TextScaleFactorChanged += TextScaleChanged;
+        ApplyGoal();
         ApplyContrast();
-        AppWindow.Closing += OnClosing;
-        Closed += (_, _) =>
-        {
-            closed = true;
-            uiSettings.TextScaleFactorChanged -= TextScaleChanged;
-            tray.Dispose();
-            NativeWindow.RemoveWindowSubclass(handle, subclass, 1);
-            Application.Current.Exit();
-        };
+        SystemParameters.StaticPropertyChanged += ContrastChanged;
     }
 
-    public void Restore()
+    protected override void OnSourceInitialized(EventArgs e)
     {
-        if (closed) return;
-        NativeWindow.ShowWindow(handle, 9);
-        placement.ResizeAndClamp();
-        if (editor is not null) editor.Restore();
-        else { Activate(); NativeWindow.SetForegroundWindow(handle); }
+        base.OnSourceInitialized(e);
+        var source = (HwndSource)PresentationSource.FromVisual(this);
+        handle = source.Handle;
+        var desktop = new DesktopPin(source);
+        pin = desktop;
+        WindowPlacement.Restore(handle, store.Current.Placement, ShadowRoom);
+        source.AddHook(Message);
+        tray = new TrayIcon(desktop.ToggleLift, () => desktop.Lifted, Run);
+        Loaded += (_, _) => desktop.Evaluate();
+    }
+
+    private void Run(TrayIcon.Command command)
+    {
+        switch (command)
+        {
+            case TrayIcon.Command.Edit: OpenEditor(); break;
+            case TrayIcon.Command.Lift: pin?.ToggleLift(); break;
+            case TrayIcon.Command.Quit: Close(); break;
+        }
     }
 
     private void ApplyGoal()
     {
-        var size = GoalLayout.Fit(store.Current.GoalText);
-        Goal.Text = store.Current.GoalText;
+        var text = store.Current.GoalText;
+        var size = GoalLayout.Fit(text);
+        if (size is null) Log.Write("The saved goal does not fit the card; showing it at the smallest size.");
+        Goal.Text = text;
         Goal.FontSize = size ?? GoalLayout.MinimumFontSize;
         Goal.LineHeight = Goal.FontSize * 1.04;
-        // A saved goal may cease to fit after system text scaling changes. Keep it readable in a scroll area.
-        if (size is null)
-        {
-            if (Card.Content is not ScrollViewer)
-            {
-                Card.Content = null;
-                Card.Content = new ScrollViewer { Content = Goal, MaxHeight = GoalLayout.Height, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-            }
-            ShowNotice("Your saved goal needs more room at this text size. Edit it to shorten it.");
-        }
-        else if (Card.Content is ScrollViewer scroll)
-        {
-            scroll.Content = null;
-            Card.Content = Goal;
-        }
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(Card, "Your goal: " + store.Current.GoalText);
+        AutomationProperties.SetName(this, "Your goal: " + text);
     }
 
     private void OpenEditor()
     {
-        if (editor is not null) { editor.Restore(); return; }
-        pointerStart = null;
-        editor = new EditGoalDialog(this, store);
+        if (editor is not null) { editor.Activate(); return; }
+        editor = new EditGoalWindow(store);
         editor.Closed += (_, _) =>
         {
             editor = null;
-            NativeWindow.EnableWindow(handle, true);
             ApplyGoal();
-            Activate();
-            Card.Focus(FocusState.Keyboard);
         };
-        NativeWindow.EnableWindow(handle, false);
+        editor.Show();
         editor.Activate();
     }
 
-    private void Card_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    private void Card_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        pointerStart = null;
-        menu.ShowAt(Card, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions { Position = e.GetPosition(Card) });
-        e.Handled = true;
+        if (e.ClickCount == 2) { OpenEditor(); return; }
+        // The widget is never the active window, so it is moved by hand, not by the system's move loop.
+        Native.GetCursorPos(out dragCursor);
+        Native.GetWindowRect(handle, out dragWindow);
+        moved = false;
+        dragging = Card.CaptureMouse();
     }
 
-    private void ShowTrayMenu(int x, int y)
+    private void Card_MouseMove(object sender, MouseEventArgs e)
     {
-        if (closed) return;
-        if (editor is not null) { editor.Restore(); return; }
-        switch (tray.ShowMenu(x, y, AppWindow.IsShownInSwitchers))
-        {
-            case TrayIcon.Command.Edit:
-                Restore();
-                OpenEditor();
-                break;
-            case TrayIcon.Command.TaskView:
-                taskView.IsChecked = AppWindow.IsShownInSwitchers = !AppWindow.IsShownInSwitchers;
-                break;
-            case TrayIcon.Command.Quit:
-                Close();
-                break;
-        }
+        if (!dragging) return;
+        Native.GetCursorPos(out var cursor);
+        int dx = cursor.X - dragCursor.X, dy = cursor.Y - dragCursor.Y;
+        if (!moved && Math.Abs(dx) + Math.Abs(dy) < 6) return;
+        moved = true;
+        Native.SetWindowPos(handle, 0, dragWindow.Left + dx, dragWindow.Top + dy, 0, 0,
+            Native.NoSize | Native.NoZOrder | Native.NoActivate);
     }
 
-    private void Card_KeyDown(object sender, KeyRoutedEventArgs e)
+    private void Card_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) => Card.ReleaseMouseCapture();
+
+    private void Card_LostMouseCapture(object sender, MouseEventArgs e)
     {
-        static bool Down(VirtualKey key) => (InputKeyboardSource.GetKeyStateForCurrentThread(key) & CoreVirtualKeyStates.Down) != 0;
-        if ((e.Key == VirtualKey.F10 && Down(VirtualKey.Shift)) || e.Key == VirtualKey.Application)
-        {
-            menu.ShowAt(Card);
-            e.Handled = true;
-        }
-        else if (Down(VirtualKey.Menu) && e.Key is VirtualKey.Left or VirtualKey.Right or VirtualKey.Up or VirtualKey.Down)
-        {
-            var position = AppWindow.Position;
-            var step = (int)Math.Round(10 * NativeWindow.GetDpiForWindow(handle) / 96d);
-            var dx = e.Key == VirtualKey.Left ? -step : e.Key == VirtualKey.Right ? step : 0;
-            var dy = e.Key == VirtualKey.Up ? -step : e.Key == VirtualKey.Down ? step : 0;
-            AppWindow.Move(new PointInt32(position.X + dx, position.Y + dy));
-            placement.ResizeAndClamp();
-            positionSave = SavePositionAsync();
-            e.Handled = true;
-        }
-        else if (e.Key is VirtualKey.Enter or VirtualKey.Space)
-        {
-            OpenEditor();
-            e.Handled = true;
-        }
+        if (!dragging) return;
+        dragging = false;
+        if (moved) positionSave = SavePositionAsync();
     }
 
-    private void Card_PointerPressed(object sender, PointerRoutedEventArgs e)
+    private void Card_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
-        var point = e.GetCurrentPoint(Card);
-        if (point.Properties.IsLeftButtonPressed && Card.Content is not ScrollViewer)
-            pointerStart = point.Position;
-    }
-
-    private void Card_PointerMoved(object sender, PointerRoutedEventArgs e)
-    {
-        if (pointerStart is not Point start || editor is not null) return;
-        var point = e.GetCurrentPoint(Card);
-        if (!point.Properties.IsLeftButtonPressed) { pointerStart = null; return; }
-        if (Math.Abs(point.Position.X - start.X) + Math.Abs(point.Position.Y - start.Y) < 6) return;
-        pointerStart = null;
-        Card.ReleasePointerCaptures();
-        NativeWindow.ReleaseCapture();
-        // The system move loop provides normal monitor crossing and WM_EXITSIZEMOVE.
-        NativeWindow.SendMessage(handle, 0x0112, 0xF012, 0); // WM_SYSCOMMAND, SC_MOVE | HTCAPTION
-        e.Handled = true;
-    }
-
-    private nint WindowMessage(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data)
-    {
-        // AccessibilitySettings.HighContrastChanged requires a UWP window and throws
-        // in this desktop app. Use the standard desktop settings/theme broadcasts.
-        if (message is 0x001A or 0x031A) // WM_SETTINGCHANGE, WM_THEMECHANGED.
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                if (!closed) ApplyContrast();
-            });
-        if (message is 0x0232 or 0x02E0 or 0x007E) // End move, DPI change, display change.
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                if (closed || NativeWindow.IsIconic(handle)) return;
-                placement.ResizeAndClamp();
-                if (message != 0x02E0) positionSave = SavePositionAsync();
-            });
-        if (message == TrayIcon.Message)
-        {
-            // Version 4 icons report the event in the low word and the screen position in wParam.
-            var input = (uint)(lParam & 0xFFFF);
-            int x = (short)(wParam & 0xFFFF), y = (short)((wParam >> 16) & 0xFFFF);
-            if (input is 0x0400 or 0x0401) DispatcherQueue.TryEnqueue(Restore); // NIN_SELECT, NIN_KEYSELECT.
-            else if (input == 0x007B) DispatcherQueue.TryEnqueue(() => ShowTrayMenu(x, y)); // WM_CONTEXTMENU.
-        }
-        else if (tray.IsTaskbarCreated(message)) tray.Add();
-        return NativeWindow.DefSubclassProc(hwnd, message, wParam, lParam);
+        Native.GetCursorPos(out var cursor);
+        tray?.ShowMenu(cursor.X, cursor.Y);
     }
 
     private async Task SavePositionAsync()
     {
-        try { await store.SavePlacementAsync(placement.Capture()); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        try
         {
-            ShowNotice("Your position could not be saved. Move the card again to retry. " + ex.Message);
+            if (WindowPlacement.Settle(handle, ShadowRoom) is { } placement) await store.SavePlacementAsync(placement);
         }
+        catch (Exception ex) { Log.Write("Position not saved: " + ex.Message); } // A lost position must never take the widget down.
     }
 
-    private async void OnClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    private nint Message(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
-        if (closing) return;
-        args.Cancel = true;
-        if (editor is not null) { editor.Restore(); return; }
-        await positionSave;
-        closing = true;
-        DispatcherQueue.TryEnqueue(Close);
+        // Keep the card reachable when a display is removed or rearranged, without overwriting the saved spot.
+        if (message == 0x007E) Dispatcher.BeginInvoke(new Action(() => WindowPlacement.Settle(handle, ShadowRoom))); // WM_DISPLAYCHANGE
+        return 0;
     }
 
-    private void ShowNotice(string message) { Notice.Message = message; Notice.IsOpen = true; }
-    private void TextScaleChanged(UISettings sender, object args) => DispatcherQueue.TryEnqueue(ApplyGoal);
+    private void ContrastChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SystemParameters.HighContrast)) ApplyContrast();
+    }
+
     private void ApplyContrast()
     {
-        Artwork.Visibility = accessibility.HighContrast ? Visibility.Collapsed : Visibility.Visible;
-        Root.Background = accessibility.HighContrast
-            ? new SolidColorBrush(uiSettings.GetColorValue(UIColorType.Background))
-            : SystemBackdrop is null ? (Brush)Application.Current.Resources["GoalFrost"]
-            : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        Goal.Foreground = accessibility.HighContrast
-            ? new SolidColorBrush(uiSettings.GetColorValue(UIColorType.Foreground))
-            : (Brush)Application.Current.Resources["GoalInk"];
+        var high = SystemParameters.HighContrast;
+        Artwork.Visibility = high ? Visibility.Collapsed : Visibility.Visible;
+        Plate.Background = high ? SystemColors.WindowBrush : (Brush)FindResource("GoalFrost");
+        Goal.Foreground = high ? SystemColors.WindowTextBrush : (Brush)FindResource("GoalInk");
+        Rim.BorderBrush = high ? SystemColors.WindowTextBrush : (Brush)FindResource("GoalRim");
+    }
+
+    protected override async void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        if (editor is { Saving: true }) { e.Cancel = true; editor.Activate(); return; }
+        if (positionSave.IsCompleted) return;
+        // Let the last move reach the disk before quitting.
+        e.Cancel = true;
+        await positionSave;
+        Close();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        SystemParameters.StaticPropertyChanged -= ContrastChanged;
+        editor?.Close();
+        tray?.Dispose();
+        pin?.Dispose();
+        Log.Write("Quit.");
+        Application.Current.Shutdown();
     }
 }

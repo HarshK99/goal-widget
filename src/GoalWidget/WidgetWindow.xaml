@@ -1,37 +1,35 @@
+<!-- The window is transparent and larger than the card, leaving room to draw the card's own corners and shadow. -->
 <Window x:Class="GoalWidget.WidgetWindow"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Goal">
-    <Grid x:Name="Root" Background="Transparent" RequestedTheme="Light">
-        <Grid x:Name="Artwork" IsHitTestVisible="False" Background="{StaticResource GoalGlassBase}">
-            <Image Source="ms-appx:///Assets/landscape.png" Stretch="UniformToFill" Opacity="0.83"
-                   AutomationProperties.AccessibilityView="Raw" />
-            <Rectangle Fill="{StaticResource LandscapeFrost}" />
-            <Rectangle Fill="{StaticResource GoalWarmLight}" />
-            <Rectangle Fill="{StaticResource GoalSurfaceLight}" />
-            <Border BorderThickness="1" BorderBrush="{StaticResource GoalRim}" />
-            <Border Margin="3" BorderThickness="1" BorderBrush="{StaticResource GoalInnerRim}" CornerRadius="4" />
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Goal" Width="262" Height="262"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" ShowActivated="False" Focusable="False" UseLayoutRounding="True">
+    <Grid Margin="26">
+        <Border x:Name="Plate" CornerRadius="21" Background="{StaticResource GoalFrost}">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="22" ShadowDepth="7" Direction="270" Opacity="0.30" Color="#0B1626" />
+            </Border.Effect>
+        </Border>
+        <Grid x:Name="Card" Background="Transparent"
+              MouseLeftButtonDown="Card_MouseLeftButtonDown" MouseMove="Card_MouseMove"
+              MouseLeftButtonUp="Card_MouseLeftButtonUp" LostMouseCapture="Card_LostMouseCapture"
+              MouseRightButtonUp="Card_MouseRightButtonUp">
+            <Grid.Clip>
+                <RectangleGeometry Rect="0,0,210,210" RadiusX="21" RadiusY="21" />
+            </Grid.Clip>
+            <Grid x:Name="Artwork" IsHitTestVisible="False">
+                <Image Source="Assets/landscape.png" Stretch="UniformToFill" Opacity="0.83"
+                       RenderOptions.BitmapScalingMode="HighQuality" />
+                <Rectangle Fill="{StaticResource LandscapeFrost}" />
+                <Rectangle Fill="{StaticResource GoalWarmLight}" />
+                <Rectangle Fill="{StaticResource GoalSurfaceLight}" />
+                <Border Margin="3" CornerRadius="18" BorderThickness="1" BorderBrush="{StaticResource GoalInnerRim}" />
+            </Grid>
+            <TextBlock x:Name="Goal" Style="{StaticResource GoalTypography}" IsHitTestVisible="False"
+                       MaxWidth="173.6" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Border x:Name="Rim" CornerRadius="21" BorderThickness="1" BorderBrush="{StaticResource GoalRim}"
+                    IsHitTestVisible="False" />
         </Grid>
-        <Button x:Name="Card" Background="Transparent" BorderThickness="0"
-                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                UseSystemFocusVisuals="True"
-                FocusVisualMargin="6" FocusVisualPrimaryThickness="2" FocusVisualSecondaryThickness="1"
-                AutomationProperties.Name="Your goal"
-                AutomationProperties.HelpText="Press Enter to edit. Right-click or press Shift F10 for Edit goal and Quit. Press Alt and an arrow key to move."
-                RightTapped="Card_RightTapped" KeyDown="Card_KeyDown">
-            <Button.Template>
-                <ControlTemplate TargetType="Button">
-                    <Grid Background="{TemplateBinding Background}">
-                        <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                            Padding="{TemplateBinding Padding}"
-                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-                    </Grid>
-                </ControlTemplate>
-            </Button.Template>
-            <TextBlock x:Name="Goal" Style="{StaticResource GoalTypography}" />
-        </Button>
-        <InfoBar x:Name="Notice" VerticalAlignment="Bottom" Margin="8" IsOpen="False"
-                 Severity="Warning" IsClosable="True" AutomationProperties.LiveSetting="Polite" />
     </Grid>
 </Window>

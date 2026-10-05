@@ -20,13 +20,10 @@ Square photographic landscape for a calm desktop goal widget: pale cloudy pearl-
 
 ## Composition in the app
 
-The square image fills the square card without a deliberate crop, at 0.83 opacity. Pale frost remains strong through the text region, including long goals. Warm diagonal light, cool surface reflection, a fine outer rim and an inset hairline supply depth without animation. Windows supplies the external corners and shadow; the preview's 30-unit outer radius is still not reproduced exactly.
+The square image fills the square card without a deliberate crop, at 0.83 opacity over a solid pale frost base. Pale frost remains strong through the text region, including long goals. Warm diagonal light, cool surface reflection, a fine outer rim and an inset hairline supply depth without animation. Since the 2026-10-05 WPF rebuild the app draws its own 21-unit corners (the preview's 30 at card scale) and its own soft shadow; live background blur is no longer used.
 
-Georgia remains a system font, not a bundled font file. The compact card uses a 27.3–16.1 font-size range with shared native measurement and -44 character spacing. Explicit line breaks and centered alignment remain. The native app has been built and observed; final contrast and varied-goal fit checks remain pending.
+Georgia remains a system font, not a bundled font file. The compact card uses a 27.3–16.1 font-size range with shared text measurement; the earlier -44 character spacing is gone because WPF has no letter-spacing. Explicit line breaks and centered alignment remain. A window capture showed the card, artwork and centered goal; final contrast and varied-goal fit checks remain pending.
 
 ## Historical reference
 
 `preview/index.html` and `preview/landscape.jpg` remain unchanged as the accepted design reference. The original photo URL is recorded in `preview/README.md`; searches did not establish the photographer reliably, and direct retrieval of the Unsplash search page returned HTTP 401. No redistribution clearance is claimed for that preview image. Do not include the preview folder in a release.
-
-Implementation references: [WinUI character spacing](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.controls.textblock.characterspacing), [dialog button styles](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.controls.contentdialog.primarybuttonstyle), [menu presenter styles](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.controls.menuflyout.menuflyoutpresenterstyle).
-

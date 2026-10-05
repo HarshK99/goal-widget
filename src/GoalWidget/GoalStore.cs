@@ -1,4 +1,8 @@
+using System;
+using System.IO;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace GoalWidget;
 
@@ -85,7 +89,7 @@ public sealed class GoalStore
                 throw new IOException("The saved files changed or cannot be read. Reopen the app before saving again.");
 
             temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
             {
                 await JsonSerializer.SerializeAsync(stream, next, Json);
                 await stream.FlushAsync();

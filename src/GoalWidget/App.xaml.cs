@@ -1,31 +1,37 @@
-using Microsoft.UI.Xaml;
+using System;
+using System.Threading;
+using System.Windows;
 
 namespace GoalWidget;
 
 public partial class App : Application
 {
-    private WidgetWindow? window;
-    public App()
-    {
-        UnhandledException += (_, args) => RecordStartupFailure(args.Exception);
-        try { InitializeComponent(); }
-        catch (Exception ex) { RecordStartupFailure(ex); throw; }
-    }
+    private Mutex? single;
 
-    private static void RecordStartupFailure(Exception exception)
+    protected override void OnStartup(StartupEventArgs e)
     {
-        var log = Environment.GetEnvironmentVariable("GOAL_WIDGET_STARTUP_LOG");
-        if (string.IsNullOrWhiteSpace(log)) return;
-        try { File.AppendAllText(log, DateTimeOffset.Now + "\n" + exception + "\n"); }
-        catch (Exception) { /* Diagnostic logging must not replace the original failure. */ }
-    }
+        base.OnStartup(e);
+        // The widget is always on the desktop, so a second launch has nothing to do.
+        single = new Mutex(true, "GoalWidget.Desktop.v2", out var first);
+        if (!first) { Shutdown(); return; }
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
-    {
+        DispatcherUnhandledException += (_, args) => Log.Write("Crash: " + args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => Log.Write("Crash: " + args.ExceptionObject);
+        Log.Write("Started.");
+
         var store = new GoalStore();
         store.Load();
-        window = new WidgetWindow(store);
-        Program.SetActivationHandler(window.DispatcherQueue, window.Restore);
-        window.Activate();
+        new WidgetWindow(store).Show();
+        if (store.Notice is not null)
+        {
+            Log.Write(store.Notice);
+            MessageBox.Show(store.Notice, "Goal", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        single?.Dispose();
+        base.OnExit(e);
     }
 }

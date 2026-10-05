@@ -1,78 +1,71 @@
-using Microsoft.UI.Windowing;
-using Windows.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace GoalWidget;
 
-internal sealed class WindowPlacement(AppWindow window, nint handle)
+/// <summary>
+/// Places the widget in physical pixels. Positions refer to the card; the window is
+/// larger on every side by the room left for the card's shadow.
+/// </summary>
+internal static class WindowPlacement
 {
-    private sealed record Monitor(nint Handle, NativeWindow.MonitorInfo Info, uint Dpi);
+    private sealed record Display(Native.MonitorInfo Info, uint Dpi);
 
-    private static List<Monitor> Displays()
+    private static Display? Describe(nint monitor)
     {
-        var monitors = new List<Monitor>();
-        NativeWindow.EnumDisplayMonitors(0, 0, (monitor, _, _, _) =>
-        {
-            var info = new NativeWindow.MonitorInfo { Size = (uint)Marshal.SizeOf<NativeWindow.MonitorInfo>(), Device = "" };
-            if (NativeWindow.GetMonitorInfo(monitor, ref info))
-            {
-                var result = NativeWindow.GetDpiForMonitor(monitor, 0, out var dpi, out _);
-                monitors.Add(new(monitor, info, result == 0 && dpi > 0 ? dpi : 96));
-            }
-            return true;
-        }, 0);
-        return monitors;
+        var info = new Native.MonitorInfo { Size = (uint)Marshal.SizeOf<Native.MonitorInfo>(), Device = "" };
+        if (!Native.GetMonitorInfo(monitor, ref info)) return null;
+        var result = Native.GetDpiForMonitor(monitor, 0, out var dpi, out _);
+        return new(info, result == 0 && dpi > 0 ? dpi : 96);
     }
 
-    internal void Restore(SavedPlacement? saved)
+    private static List<Display> Displays()
+    {
+        var displays = new List<Display>();
+        Native.EnumDisplayMonitors(0, 0, (monitor, _, _, _) =>
+        {
+            if (Describe(monitor) is { } display) displays.Add(display);
+            return true;
+        }, 0);
+        return displays;
+    }
+
+    internal static void Restore(nint window, SavedPlacement? saved, double shadowRoom)
     {
         var displays = Displays();
         if (displays.Count == 0) return;
-        var primary = displays.FirstOrDefault(m => (m.Info.Flags & 1) != 0) ?? displays[0];
-        var chosen = saved is null ? primary : displays.FirstOrDefault(m => m.Info.Device == saved.MonitorId) ?? primary;
+        var primary = displays.FirstOrDefault(d => (d.Info.Flags & 1) != 0) ?? displays[0];
+        var chosen = saved is null ? primary : displays.FirstOrDefault(d => d.Info.Device == saved.MonitorId) ?? primary;
+        var scale = chosen.Dpi / 96d;
+        var size = (int)Math.Round(GoalLayout.CardSize * scale);
+        var margin = (int)Math.Round(24 * scale);
         var work = chosen.Info.Work;
-        var size = (int)Math.Round(GoalLayout.CardSize * chosen.Dpi / 96d);
-        var margin = (int)Math.Round(24 * chosen.Dpi / 96d);
-        // Coordinates are physical pixels. Clamp even when a monitor's name survives a rearrangement.
+        // First launch: upper-right of the primary display. Clamp even when a monitor's name survives a rearrangement.
         var x = saved?.X ?? work.Right - size - margin;
         var y = saved?.Y ?? work.Top + margin;
-        x = Math.Clamp(x, work.Left, Math.Max(work.Left, work.Right - size));
-        y = Math.Clamp(y, work.Top, Math.Max(work.Top, work.Bottom - size));
-        window.Move(new PointInt32(x, y));
-        ResizeAndClamp();
+        Move(window, Clamp(x, work.Left, work.Right - size), Clamp(y, work.Top, work.Bottom - size), shadowRoom * scale);
     }
 
-    internal void ResizeAndClamp()
+    /// <summary>Keeps the card inside the nearest display's usable area and reports where it ended up.</summary>
+    internal static SavedPlacement? Settle(nint window, double shadowRoom)
     {
-        var dpi = NativeWindow.GetDpiForWindow(handle);
-        var size = (int)Math.Round(GoalLayout.CardSize * (dpi == 0 ? 96 : dpi) / 96d);
-        window.ResizeClient(new SizeInt32(size, size));
-        // ResizeClient can include caption height even with the title bar hidden.
-        // Correct from the actual client rectangle rather than hard-coding a caption size.
-        if (NativeWindow.GetClientRect(handle, out var client))
-        {
-            var extraWidth = size - (client.Right - client.Left);
-            var extraHeight = size - (client.Bottom - client.Top);
-            if (extraWidth != 0 || extraHeight != 0)
-                window.Resize(new SizeInt32(window.Size.Width + extraWidth, window.Size.Height + extraHeight));
-        }
-        var monitor = NativeWindow.MonitorFromWindow(handle, 2);
-        var info = new NativeWindow.MonitorInfo { Size = (uint)Marshal.SizeOf<NativeWindow.MonitorInfo>(), Device = "" };
-        if (!NativeWindow.GetMonitorInfo(monitor, ref info)) return;
-        var work = info.Work;
-        var position = window.Position;
-        // Include any system border in the visibility calculation.
-        window.Move(new PointInt32(
-            Math.Clamp(position.X, work.Left, Math.Max(work.Left, work.Right - window.Size.Width)),
-            Math.Clamp(position.Y, work.Top, Math.Max(work.Top, work.Bottom - window.Size.Height))));
+        if (Describe(Native.MonitorFromWindow(window, 2)) is not { } display || !Native.GetWindowRect(window, out var rect))
+            return null;
+        var scale = display.Dpi / 96d;
+        var room = (int)Math.Round(shadowRoom * scale);
+        var size = (int)Math.Round(GoalLayout.CardSize * scale);
+        var work = display.Info.Work;
+        var x = Clamp(rect.Left + room, work.Left, work.Right - size);
+        var y = Clamp(rect.Top + room, work.Top, work.Bottom - size);
+        Move(window, x, y, shadowRoom * scale);
+        return new(x, y, display.Info.Device, display.Dpi);
     }
 
-    internal SavedPlacement Capture()
-    {
-        var monitor = NativeWindow.MonitorFromWindow(handle, 2);
-        var info = new NativeWindow.MonitorInfo { Size = (uint)Marshal.SizeOf<NativeWindow.MonitorInfo>(), Device = "" };
-        NativeWindow.GetMonitorInfo(monitor, ref info);
-        var position = window.Position;
-        return new(position.X, position.Y, info.Device, NativeWindow.GetDpiForWindow(handle));
-    }
+    private static void Move(nint window, int cardX, int cardY, double room) =>
+        Native.SetWindowPos(window, 0, cardX - (int)Math.Round(room), cardY - (int)Math.Round(room), 0, 0,
+            Native.NoSize | Native.NoZOrder | Native.NoActivate);
+
+    private static int Clamp(int value, int minimum, int maximum) => Math.Max(minimum, Math.Min(value, Math.Max(minimum, maximum)));
 }
