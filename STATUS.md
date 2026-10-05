@@ -31,8 +31,17 @@ The user reported the widget coming to the front when switching virtual desktops
 - Graceful quit and restart worked. Tray icon registered with Windows for the installed path.
 - Startup shortcut points to the installed exe and the target exists.
 
+## User-reported results (2026-10-05)
+"drag is working, desktop switching is perfect now, editing as well." The saved file confirms an edited goal and a new position. The original pop-up problem is resolved.
+
+Win+D: the user first wrote "win+d working", then clarified that Win+D hides the widget and pressing it again shows it. That is a failure against the brief, which wants the widget to stay visible. An earlier note here claiming Windows kept it visible was wrong.
+
+Diagnosis (scripted Show Desktop toggle sampled every 20 ms): Windows raises the desktop window (`Progman`) above every app and above the widget, and sends no foreground-change event when it does. `DesktopPin` relied on that event, so it only noticed when Show Desktop was ending, raised the widget for half a second and dropped it. A first fix that assumed a wrong reading did not help and was replaced.
+
+Fix, built and installed (user authorized the rebuild with "okay"; two builds, zero warnings/errors, `artifacts/wpf-build.log`): `DesktopPin` now polls the desktop's position every 250 ms, reading a few window handles and changing nothing unless the state changed. The widget counts as "over the desktop" only while the focus is on the shell or on the widget's own process, so it drops back the moment an app returns. Measured: raised about 200 ms after the toggle, held for the 3 seconds measured, back at the bottom within 35 ms of toggling off, never above the returning windows. The user has not yet confirmed it with the real Win+D key.
+
 ## Not checked
-The user was given a hand-check list (desktop switching, Win+D, drag, menus, editing, tray clicks, next sign-in) and replied "perfect" with the cleanup request. That reply did not say which items were tried, so none is recorded as confirmed. `docs/release-checks.md` lists every case. No automated tests exist; no formal code review was run on the new code.
+Right-click menus, tray clicks, start at the next sign-in, and the remaining rows in `docs/release-checks.md`. No automated tests exist; no formal code review was run on the new code.
 
 ## Cleanup done (2026-10-05)
 - Removed from the repository: the WinUI source files, `docs/phases/01`–`03`, the old implementation plan, and the historical WinUI sections of `environment.md` and `release-checks.md`. `AGENTS.md` now lists only Phase 4; `docs/phases/04-check-and-package.md` was rewritten for the WPF app.
@@ -41,7 +50,7 @@ The user was given a hand-check list (desktop switching, Win+D, drag, menus, edi
 
 ## Open issues
 - Known gaps are listed in the brief under Quality: keyboard access to the card, the Windows text-size setting, the editor in high contrast, letter-spacing.
-- Win+D detection is unproven on this Windows build.
+- The Win+D fix adds a permanent 250 ms timer. It is cheap, but it is the one piece of the app that runs continuously.
 
 ## Next starting point
-Record the user's actual results for the cases in `docs/release-checks.md`. If Win+D does not keep the widget visible, read `log.txt` for "Show Desktop" lines and adjust `DesktopPin.ShowDesktopActive`. Then finish the release checks and package a ZIP when authorized.
+Get the user's confirmation of Win+D with the real key. Collect results for menus, tray clicks and sign-in start. Then finish the release checks and package a ZIP when authorized. The Win+D fix in `DesktopPin.cs` and the result updates to this file and `docs/release-checks.md` are not committed.

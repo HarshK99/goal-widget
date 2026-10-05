@@ -41,8 +41,11 @@ internal sealed class DesktopPin : IDisposable
         });
         probe.AddHook(FreezeOrder);
 
-        desktopWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-        desktopWatch.Tick += (_, _) => Evaluate();
+        // Windows sends no event when Show Desktop starts, so the desktop's position is polled.
+        // A tick reads a handful of window handles and touches nothing unless the state changed.
+        desktopWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        desktopWatch.Tick += (_, _) => Evaluate(place: false);
+        desktopWatch.Start();
         foregroundChanged = (_, _, _, _, _, _, _) => Evaluate();
         hook = Native.SetWinEventHook(3, 3, 0, foregroundChanged, 0, 0, 0); // EVENT_SYSTEM_FOREGROUND, delivered on this thread
         Place();
@@ -56,20 +59,26 @@ internal sealed class DesktopPin : IDisposable
     }
 
     /// <summary>Re-reads the desktop's state and puts the widget where it belongs.</summary>
-    internal void Evaluate()
+    internal void Evaluate(bool place = true)
     {
         // A lift lasts until the user moves on to another app.
         var foreground = Native.GetForegroundWindow();
-        if (Lifted && foreground != 0 && foreground != liftedOver && !IsOurs(foreground)) Lifted = false;
+        if (Lifted && foreground != 0 && foreground != liftedOver && !IsOurs(foreground))
+        {
+            Lifted = false;
+            place = true;
+        }
 
-        var desktop = ShowDesktopActive();
+        // Show Desktop ends the moment an app takes the focus, a little before the desktop drops back.
+        // Requiring the focus to be on the shell or on us keeps the widget from flashing over the returning windows.
+        var desktop = ShowDesktopActive() && (foreground == 0 || IsOurs(foreground) || SameProcess(foreground, desktopHost));
         if (desktop != overDesktop)
         {
             overDesktop = desktop;
-            desktopWatch.IsEnabled = desktop; // Leaving Show Desktop does not always change the foreground window.
             Log.Write(desktop ? "Show Desktop on: widget raised." : "Show Desktop off: widget back on the desktop.");
+            place = true;
         }
-        Place();
+        if (place) Place();
     }
 
     private void Place()
@@ -105,9 +114,10 @@ internal sealed class DesktopPin : IDisposable
     {
         var host = DesktopHost();
         if (host == 0 || !Native.IsWindowVisible(host)) return false;
-        for (var below = Native.GetWindow(host, 2); below != 0; below = Native.GetWindow(below, 2)) // GW_HWNDNEXT
-            if (below == probe.Handle) return true;
-        return false;
+        // Normally the desktop is the bottom window, just beneath the probe. Show Desktop lifts it above everything.
+        for (var below = Native.GetWindow(probe.Handle, 2); below != 0; below = Native.GetWindow(below, 2)) // GW_HWNDNEXT
+            if (below == host) return false;
+        return true;
     }
 
     // The top-level window that holds the desktop icons.
@@ -128,6 +138,13 @@ internal sealed class DesktopPin : IDisposable
     {
         Native.GetWindowThreadProcessId(other, out var process);
         return process == Native.GetCurrentProcessId();
+    }
+
+    private static bool SameProcess(nint first, nint second)
+    {
+        Native.GetWindowThreadProcessId(first, out var one);
+        Native.GetWindowThreadProcessId(second, out var two);
+        return one != 0 && one == two;
     }
 
     public void Dispose()

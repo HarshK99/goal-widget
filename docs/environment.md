@@ -42,7 +42,7 @@ Run `tools/install.ps1`. It copies the build to `%LOCALAPPDATA%\Programs\GoalWid
 
 ## Notes for the next change
 
-- The window model lives in `DesktopPin.cs`: unowned tool window, never-activate, held at the bottom of the stack. Only that class changes the stacking order.
+- The window model lives in `DesktopPin.cs`: unowned tool window, never-activate, held at the bottom of the stack. Only that class changes the stacking order. Windows sends no event when Show Desktop (Win+D) starts, so the class polls the desktop's position every 250 ms and raises the widget while the desktop is on top.
 - The widget is never the active window. So the card is dragged by hand in `WidgetWindow.xaml.cs`, and menus are owned by the tray icon's hidden window in `TrayIcon.cs`.
 - `IsExternalInit.cs` exists because .NET Framework lacks the marker type that records need.
 - Implicit usings are off; each file lists its own.
